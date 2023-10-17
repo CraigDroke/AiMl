@@ -89,13 +89,12 @@ def generate_feature_maps(im):
 
 # Gradio interface
 with gr.Blocks() as demo:
-
-    #Turn this into a drop down box 
-    layorNumber = gr.Number(label="Select Layer Number", default=0, step=1, minimum=0, maximum=48)
+    
+    layorNumber = gr.Slider(0, 16, value=4, label="Count", info="Choose between 0 and 16", step=1)
 
     with gr.Row():
         im = gr.Image()
-        im2 = gr.Image(type= 'filepath')
+        im2 = gr.Image(type= 'filepath',)
 
     def show_feature_maps(im, layorNumber):
         # Future if check for if all layors exist to run faster
