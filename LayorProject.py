@@ -1,7 +1,3 @@
-#Project: Visualise hidden layers in features
-
-# Goal: You can choose which layor to observe
-
 import torch
 import torch.nn as nn
 import torchvision
@@ -9,31 +5,25 @@ from torchvision import models, transforms, utils
 from torch.autograd import Variable
 import numpy as np
 import matplotlib.pyplot as plt
-#import scipy.misc        #Consider removing this
+#import scipy.misc
 from PIL import Image
 import json
 import gradio as gr
 import os
-#matplotlib inline
 
-#Defining image transformations
 transform = transforms.Compose([
     transforms.Resize((224, 224)),
     transforms.ToTensor(),
     transforms.Normalize(mean=0., std=1.)
 ])
 
-def cnn(im, layorNumber):
-    #Loading the image
-    image = Image.open(str(im))
+def generate_feature_maps(im):
+    image = Image.fromarray(im, 'RGB')
     plt.imshow(image)
 
-    #Load in pretrained model
     model = models.resnet18(pretrained=True)
     print(model)
 
-    #Extracting layers and names
-    #--------------------------------
     # we will save the conv layer weights in this list
     model_weights =[]
     #we will save the 49 conv layers in this list
@@ -58,32 +48,28 @@ def cnn(im, layorNumber):
     print(f"Total convolution layers: {counter}")
     print("conv_layers")
 
-    #GPU check
     device = torch.device('cpu')
     model = model.to(device)
 
-    #Image transformation
     image = transform(image)
     print(f"Image shape before: {image.shape}")
     image = image.unsqueeze(0)
     print(f"Image shape after: {image.shape}")
     image = image.to(device)
 
-    #Feature map generation
-    outputsThis = []                     #This is what we are indexing
-    names = []                           #This is what the user should select from
+    outputs = []
+    names = []
     for layer in conv_layers[0:]:
         image = layer(image)
-        outputsThis.append(image)
+        outputs.append(image)
         names.append(str(layer))
-    print(len(outputsThis))
+    print(len(outputs))
     #print feature_maps
-    for feature_map in outputsThis:
+    for feature_map in outputs:
         print(feature_map.shape)
-    
-    #3D to 2D tensor
+
     processed = []
-    for feature_map in outputsThis:
+    for feature_map in outputs:
         feature_map = feature_map.squeeze(0)
         gray_scale = torch.sum(feature_map,0)
         gray_scale = gray_scale / feature_map.shape[0]
@@ -91,26 +77,39 @@ def cnn(im, layorNumber):
     for fm in processed:
         print(fm.shape)
 
-    #Plot features
-    for i in range(len(processed)):
-        #generate images here
+    # Plot and save feature maps for each layer
+    for i, (fm, name) in enumerate(zip(processed, names)):
+        fig = plt.figure(figsize=(10, 10))
+        a = fig.add_subplot(1, 1, 1)  # You should adjust the layout as needed
+        imgplot = plt.imshow(fm, cmap='viridis')  # Adjust the colormap if needed
+        a.axis("off")
+        filename = f'layor{i}.jpg'
+        plt.savefig('C:\\Users\\cdrok\\Documents\\JuniorClinic\\AiMl\\layors\\' + filename, bbox_inches='tight')
+        plt.close(fig)  # Close the figure after saving
 
-    #this to jpg ... outputsThis[int(layorNumber)]
-    # Create figure out of each layor and itterate through them
-
-#Below pertains to gradio interface
-
+# Gradio interface
 with gr.Blocks() as demo:
 
-    layorNumber = gr.Textbox(label="Input layor number", lines=2)
+    #Turn this into a drop down box 
+    layorNumber = gr.Number(label="Select Layer Number", default=0, step=1, minimum=0, maximum=48)
 
     with gr.Row():
         im = gr.Image()
-        im2 = gr.Image()
+        im2 = gr.Image(type= 'filepath')
 
-    btn = gr.Button(value="Select Image")
-    btn.click(cnn, inputs=[im,layorNumber], outputs=[im2])
+    def show_feature_maps(im, layorNumber):
+        # Future if check for if all layors exist to run faster
+        generate_feature_maps(im)
+        this_path = 'C:\\Users\\cdrok\\Documents\\JuniorClinic\\AiMl\\layors\\layor' + str(int(layorNumber)) + '.jpg'
+        return this_path
+
+    btn = gr.Button(value="Generate Feature Maps")
+    btn.click(show_feature_maps, inputs=[im, layorNumber], outputs=[im2])
 
 if __name__ == "__main__":
     demo.launch()
     
+
+
+
+
